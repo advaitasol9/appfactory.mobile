@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { View, Text, StyleSheet } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 interface PropTypes {
@@ -30,12 +31,27 @@ const tokenObjectIV = {
   refresh_expires_in: 0,
 }
 
+interface ToastTypes {
+  type: string
+  message: string
+}
+
+const ToastIV = {
+  type: '',
+  message: '',
+}
+
 const AuthContext = React.createContext({})
 
 const AuthProvider = ({ keycloakUrl, clientId, children }: PropTypes) => {
   const [accessToken, setAccessToken] = useState<string>('')
   const [tokenObject, setTokenObject] =
     useState<TokenObjectTypes>(tokenObjectIV)
+  const [toast, setToast] = useState<ToastTypes>(ToastIV)
+
+  useEffect(() => {
+    if (toast.message) setTimeout(() => setToast(ToastIV), 1000)
+  }, [toast])
 
   useEffect(() => {
     AsyncStorage.getItem('tokenObject')
@@ -78,8 +94,13 @@ const AuthProvider = ({ keycloakUrl, clientId, children }: PropTypes) => {
       const data = await res.json()
       if (data?.access_token) {
         await saveTokenData(data)
-      }
-    } catch (err) {
+      } else if (data?.error == 'invalid_grant')
+        setToast({ type: 'error', message: 'Invalid credentials' })
+      else setToast({ type: 'error', message: 'Error!' })
+    } catch (err: any) {
+      if (err?.error == 'invalid_grant')
+        setToast({ type: 'error', message: 'Invalid credentials' })
+      else setToast({ type: 'error', message: 'Error!' })
       console.log('err', err)
     }
   }
@@ -98,8 +119,9 @@ const AuthProvider = ({ keycloakUrl, clientId, children }: PropTypes) => {
       const data = await res.json()
       if (data?.access_token) {
         await saveTokenData(data)
-      }
+      } else setToast({ type: 'error', message: 'Error!' })
     } catch (err) {
+      setToast({ type: 'error', message: 'Error!' })
       console.log('err', err)
     }
   }
@@ -154,6 +176,7 @@ const AuthProvider = ({ keycloakUrl, clientId, children }: PropTypes) => {
       .then(() => {
         setTokenObject(tokenObjectIV)
         setAccessToken('')
+        setToast({ type: 'error', message: 'Session expired!' })
       })
       .catch((err) => console.log('err', err))
   }
@@ -169,9 +192,36 @@ const AuthProvider = ({ keycloakUrl, clientId, children }: PropTypes) => {
       }}
     >
       {children}
+      {!!toast.message && (
+        <View
+          style={[
+            styles.toastContainer,
+            { backgroundColor: toast.type == 'error' ? '#CD5C5C' : '#228b22' },
+          ]}
+        >
+          <Text style={styles.toastText}>{toast.message}</Text>
+        </View>
+      )}
     </AuthContext.Provider>
   )
 }
+
+const styles = StyleSheet.create({
+  toastContainer: {
+    position: 'absolute',
+    top: 10,
+    height: 40,
+    width: '90%',
+    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  toastText: {
+    color: '#FFF',
+    fontSize: 16,
+  },
+})
 
 export const useAuthContext: any = () => useContext(AuthContext)
 
