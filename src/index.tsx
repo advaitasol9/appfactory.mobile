@@ -171,12 +171,12 @@ const AuthProvider = ({ keycloakUrl, clientId, children }: PropTypes) => {
     })
   }
 
-  const logoutHandler = () => {
+  const logoutHandler = (autoLogout = true) => {
     AsyncStorage.removeItem('tokenObject')
       .then(() => {
         setTokenObject(tokenObjectIV)
         setAccessToken('')
-        setToast({ type: 'error', message: 'Session expired!' })
+        if (autoLogout) setToast({ type: 'error', message: 'Session expired!' })
       })
       .catch((err) => console.log('err', err))
   }
@@ -185,7 +185,7 @@ const AuthProvider = ({ keycloakUrl, clientId, children }: PropTypes) => {
     <AuthContext.Provider
       value={{
         accessToken,
-        loginHandler,
+        loginHandler: () => logoutHandler(false),
         apiHelper,
         checkOrRefreshToken,
         logoutHandler,
