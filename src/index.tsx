@@ -185,10 +185,10 @@ const AuthProvider = ({ keycloakUrl, clientId, children }: PropTypes) => {
     <AuthContext.Provider
       value={{
         accessToken,
-        loginHandler: () => logoutHandler(false),
+        loginHandler,
         apiHelper,
         checkOrRefreshToken,
-        logoutHandler,
+        logoutHandler: () => logoutHandler(false),
       }}
     >
       {children}
